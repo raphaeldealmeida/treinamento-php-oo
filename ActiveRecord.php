@@ -41,7 +41,13 @@ abstract class ActiveRecord {
         $parametrosBind = array();
        
         foreach ($atributos as $key => $value) {
+            
+            if($atributos[$key] instanceof DateTime){
+                $atributos[$key] = $atributos[$key]->format('Y-m-d h:i:s');
+            }       
+            
             $parametrosBind[] = &$atributos[$key];
+            
             if($key != 'id'){
                 $tipos .= 's';
                 $parametros .= '?, ';
