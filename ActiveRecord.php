@@ -3,15 +3,8 @@
 abstract class ActiveRecord {
     
     public static function find($id) {
-        $con = self::getConnection();
-
-        $result = $con->query("SELECT * FROM noticias WHERE id = {$id}");
-
-        while ($row = $result->fetch_assoc()) {
-            $noticia = new Noticia($row['titulo'],  $row['texto'], 
-                                   $row['data_criacao'], $row['id']);
-        }
-        return $noticia;
+        $entidades = self::findBy(array('id' => $id));
+        return current($entidades);
     }
     
     public function save(){
@@ -32,8 +25,6 @@ abstract class ActiveRecord {
     private function insert() {
         $con = self::getConnection();
 
-        $tabela = strtolower(get_called_class()) . 's';
-        
         $atributos = get_object_vars($this); 
         
         $parametros = '';
@@ -57,15 +48,15 @@ abstract class ActiveRecord {
         $parametrosBind[0] = $tipos;
         $parametros = substr($parametros, 0, -2);
                 
-        $sql = "INSERT INTO {$tabela} 
-                VALUES (NULL, {$parametros});";
+        $sql = "INSERT INTO " . self::getNomeTabela()  
+                . " VALUES (NULL, {$parametros});";
         
         
         if ($stmt = $con->prepare($sql)) {
             call_user_func_array(array($stmt, 'bind_param'), 
                                  $parametrosBind);
             $stmt->execute();
-            $this->id = $con->insert_id;
+            $this->id = $stmt->insert_id;
         }
         
         if($con->errno){
@@ -80,5 +71,60 @@ abstract class ActiveRecord {
             die('N�o foi poss�vel acessar a base de dados');
         }
         return $con;
+    }
+    
+    private static function getNomeTabela(){
+        return strtolower(get_called_class()) . 's';
+    }
+    
+    public static function findBy(array $params){
+        $con = self::getConnection();
+        
+        $where = ' WHERE 1 = 1 ';
+        foreach ($params as $coluna => $value) {
+            if(is_array($value)){
+                
+                $value = implode("','", $value);
+                $where .= "AND {$coluna} in ('{$value}') ";
+                
+            }else{
+                $where .= "AND {$coluna} = '{$value}' ";
+            }
+        }
+                
+        $sql = "SELECT * FROM " . self::getNomeTabela() . "  $where ";
+                
+        $result = $con->query($sql);
+
+        $entidades = array();
+        while ($row = $result->fetch_assoc()) {
+            $NomeDaClasse = get_called_class();
+            
+            $entidade = new $NomeDaClasse();
+            
+            foreach ($row as $nome => $valor) {
+                
+                $a = explode('_', $nome);
+                array_walk($a, function (&$val, $key){
+                    $val = ucfirst($val);
+                });
+                $a = implode('', $a);
+                
+                $setName = 'set' . $a;                
+                $entidade->$setName($valor);
+            }
+            $entidades[] = $entidade;
+        }
+        return $entidades;
+    }
+    
+    public static function __callStatic($name, $arguments) {
+        
+        $temp = explode('_', $name);
+        $coluna = end($temp);
+
+        $valor = current($arguments);
+
+        return self::findBy(array($coluna => $valor));
     }
 }

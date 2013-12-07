@@ -9,7 +9,7 @@ class Noticia extends ActiveRecord{
     protected $dataCriacao;
 //    protected $autor;
     
-    function __construct($titulo, $texto, $dataCriacao, $id = null) {
+    function __construct($titulo = null, $texto = null, $dataCriacao = null, $id = null) {
         $this->id = $id;
         $this->titulo = $titulo;
         $this->texto = $texto;
@@ -47,6 +47,19 @@ class Noticia extends ActiveRecord{
     public function getDataCriacao() {
         return $this->dataCriacao;
     }
+
+    public function setId($id) {
+        $this->id = $id;
+    }
+
+    public function setTexto($texto) {
+        $this->texto = $texto;
+    }
+
+    public function setDataCriacao($dataCriacao) {
+        $this->dataCriacao = $dataCriacao;
+    }
+
 
 
 
